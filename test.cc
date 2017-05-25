@@ -1,5 +1,4 @@
 #include <iostream>
-#include <stdio.h>
 #include <fstream>
 #include <cmath>
 
@@ -21,6 +20,7 @@ const static int seconds = 2;
 
 static SDL_Window* window;
 static SDL_Renderer* renderer;
+static int width = 600;
 static float scale = 1.0f;
 static double dx;
 
@@ -30,7 +30,7 @@ static SDL_Color white = {255, 255, 255};
 
 void drawScale()
 {
-	SDL_RenderDrawLine(renderer, 0, 260, 600, 260);
+	SDL_RenderDrawLine(renderer, 0, 260, width, 260);
 	char buf[64];
 	SDL_Surface* bottom1 = TTF_RenderText_Solid(font, "0", white);
 	SDL_Texture* t1 = SDL_CreateTextureFromSurface(renderer, bottom1);
@@ -46,7 +46,7 @@ void drawScale()
 	SDL_Texture* t2 = SDL_CreateTextureFromSurface(renderer, bottom2);
 
 	SDL_Rect r2;
-	r2.x = 500;
+	r2.x = width - 100;
 	r2.y = 260;
 	r2.w = 100;
 	r2.h = 40;
@@ -84,7 +84,7 @@ int WinMain(int argc, char** argv) {
 	bool quit = false;
 
 	// create a window and renderer (a canvas to draw things on)
-	SDL_CreateWindowAndRenderer(600, 300, 0, &window, &renderer);
+	SDL_CreateWindowAndRenderer(width, 300, 0, &window, &renderer);
 	// pick black...
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	// ...and fill the entire window
@@ -129,7 +129,7 @@ int WinMain(int argc, char** argv) {
     write(of, samplerate*channels*16, 4);
 
     // write the block align, or (channels * bytes per sample)
-    write(of, channels*16/8, 2);
+    write(of, channels*16, 2);
 
     // write the bitrate, or how many bits are in each audio sample
     write(of, 16, 2);
@@ -138,7 +138,7 @@ int WinMain(int argc, char** argv) {
     of << "data";
 
     // write the size of the data chunk, in bytes
-    write(of, samplerate*seconds*channels*16/8, 4);
+    write(of, samplerate*seconds*channels*16, 4);
 
 	for (int i = 0; i < samplerate * seconds; i++) 
 	{
@@ -147,11 +147,14 @@ int WinMain(int argc, char** argv) {
 
 		// write the raw audio data to the output file
 		// multiply the value by the maximum volume
-		write(of, (short) (s * 32768.0), 2);
+		write(of, (short) (s * 32767.0), 2);
 
 		// render the current sample on the window
 		SDL_RenderDrawPoint(renderer, (int) (600.0 - (double)(i)*dx), s * 100 + 150);
 	}
+
+	// we're done, close the file
+	of.close();
 
 	TTF_Init();
 	font = TTF_OpenFont("Ubuntu-R.ttf", 14);
@@ -166,19 +169,19 @@ int WinMain(int argc, char** argv) {
 			quit = true;
 		if (e.type == SDL_KEYDOWN) {
 			if (e.key.keysym.sym == SDLK_PLUS) {
-				scale -= 0.001;
+				scale -= dx / 10.0;
 				redraw(freq);
 			} else if (e.key.keysym.sym == SDLK_MINUS) {
-				scale += 0.001;
+				scale += dx / 10.0;
 				redraw(freq);
 			} else if (e.key.keysym.sym == SDLK_r) {
 				scale = 1.0f;
 				redraw(freq);
 			} else if (e.key.keysym.sym == SDLK_q) {
-				scale -= 0.01;
+				scale -= dx;
 				redraw(freq);
 			} else if (e.key.keysym.sym == SDLK_a) {
-				scale += 0.01;
+				scale += dx;
 				redraw(freq);
 			}
 		}
@@ -186,9 +189,6 @@ int WinMain(int argc, char** argv) {
 		SDL_RenderPresent(renderer);
 		SDL_Delay(3);
 	}
-
-	// we're done, close the file
-	of.close();
 
 	return 0;
 }
